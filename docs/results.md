@@ -4,7 +4,7 @@ Design assumptions come from `analysis/params.py`. Actuator numbers are approxim
 
 - Geometry: d1=120 mm, a2=200 mm, d4=180 mm, d6=100 mm  ->  max reach from shoulder 480 mm
 - Only modules with an integrated driver are considered; J1-J5 need a known backlash of at most 12 arcmin
-- Total moving mass in the model: 3.73 kg (payload 0.5 kg)
+- Total moving mass in the model: 3.19 kg (payload 0.5 kg)
 
 ## Worst-case joint torque
 
@@ -12,9 +12,9 @@ Random search of 30 000 poses inside the joint limits plus the stretched-out pos
 
 | Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | actuator | rated margin |
 |---|---|---|---|---|---|---|
-| J1 | 0.00 | 1.82 | 0.00 | 2.73 | CubeMars AKH70-16 | n/a (point-mass model) |
-| J2 | 9.07 | 11.67 | 13.61 | 17.50 | CubeMars AKH70-16 | 1.9x |
-| J3 | 3.61 | 4.85 | 5.41 | 7.28 | CubeMars AKH70-16 | 4.8x |
+| J1 | 0.00 | 1.71 | 0.00 | 2.57 | CubeMars AKH70-16 | n/a (point-mass model) |
+| J2 | 8.03 | 10.52 | 12.05 | 15.78 | CubeMars AKH70-16 | 2.2x |
+| J3 | 3.61 | 4.85 | 5.41 | 7.28 | CubeMars AK45-36 V3 | 1.5x |
 | J4 | 0.59 | 0.79 | 0.88 | 1.19 | CubeMars AK45-36 V3 | 9.1x |
 | J5 | 0.59 | 0.85 | 0.88 | 1.28 | CubeMars AK45-36 V3 | 9.1x |
 | J6 | 0.00 | 0.00 | 0.00 | 0.00 | CubeMars AK45-36 V3 | n/a (point-mass model) |
@@ -31,7 +31,7 @@ Full backlash range of each joint turned into TCP displacement (mm) with the pos
 |---|---|---|---|---|---|
 | J1 | CubeMars AKH70-16 | 12 | 1.68 | 1.68 | 0.50 |
 | J2 | CubeMars AKH70-16 | 12 | 1.68 | 1.68 | 1.05 |
-| J3 | CubeMars AKH70-16 | 12 | 0.98 | 0.98 | 0.85 |
+| J3 | CubeMars AK45-36 V3 | 12 | 0.98 | 0.98 | 0.85 |
 | J4 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.35 | 0.29 |
 | J5 | CubeMars AK45-36 V3 | 12 | 0.35 | 0.35 | 0.35 |
 | J6 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.00 | 0.00 |
@@ -44,12 +44,12 @@ Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on came
 
 | payload (kg) | J2 (Nm) | J3 (Nm) |
 |---|---|---|
-| 0.1 | 10.79 | 3.76 |
-| 0.25 | 11.84 | 4.38 |
-| 0.5 | 13.61 | 5.41 |
-| 0.75 | 15.38 | 6.44 |
-| 1.0 | 17.14 | 7.47 |
-| 1.5 | 20.67 | 9.53 |
+| 0.1 | 9.23 | 3.76 |
+| 0.25 | 10.29 | 4.38 |
+| 0.5 | 12.05 | 5.41 |
+| 0.75 | 13.82 | 6.44 |
+| 1.0 | 15.58 | 7.47 |
+| 1.5 | 19.11 | 9.53 |
 
 ## Workspace and singularities
 

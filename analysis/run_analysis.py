@@ -20,10 +20,11 @@ IMG = os.path.join(ROOT, "docs", "img")
 os.makedirs(IMG, exist_ok=True)
 SF = 1.5
 MAX_BACKLASH = 12   # arcmin, for joints that move the tip (J1-J5)
-# Chosen by hand: the hollow-shaft AKH70-16 has dual 21-bit encoders (one on the
-# output side), 3x torque margin and a 7 mm bore for cables. The wrist is picked
-# by the search below (lightest module that is strong enough and low backlash).
-PREFERRED = {1: "CubeMars AKH70-16", 2: "CubeMars AKH70-16", 3: "CubeMars AKH70-16"}
+# Chosen by hand. J1/J2: the hollow-shaft AKH70-16 (dual 21-bit encoders with one on
+# the output side, big torque margin, 7 mm bore for cables). J3: the much lighter AK45-36 V3,
+# because the elbow actuator's weight loads the shoulder. The wrist is picked by the
+# search below (lightest module that is strong enough and low backlash).
+PREFERRED = {1: "CubeMars AKH70-16", 2: "CubeMars AKH70-16", 3: "CubeMars AK45-36 V3"}
 ALPHA = 5.0
 JOINTS = ["J1", "J2", "J3", "J4", "J5", "J6"]
 
