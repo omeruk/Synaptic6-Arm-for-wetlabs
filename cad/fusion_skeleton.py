@@ -39,7 +39,7 @@ def run(context):
         p = lambda x, y: adsk.core.Point3D.create(x, y, 0)   # cm
         d1, a2, d4, d6 = (PARAMS_MM[k] / 10 for k in ("d1", "a2", "d4", "d6"))
 
-        lines = sketch.sketchLines
+        lines = sketch.sketchCurves.sketchLines
         base_to_shoulder = lines.addByTwoPoints(sketch.originPoint, p(0, d1))
         upper_arm = lines.addByTwoPoints(base_to_shoulder.endSketchPoint, p(a2, d1))
         forearm = lines.addByTwoPoints(upper_arm.endSketchPoint, p(a2, d1 + d4))
@@ -69,7 +69,7 @@ def run(context):
         # --- joint markers (J2 shoulder, J3 elbow, J5/J6 wrist centre, TCP) --
         for pt in (base_to_shoulder.endSketchPoint, upper_arm.endSketchPoint,
                    forearm.endSketchPoint, tool.endSketchPoint):
-            sketch.sketchCircles.addByCenterRadius(pt, 0.6)
+            sketch.sketchCurves.sketchCircles.addByCenterRadius(pt, 0.6)
 
         ui.messageBox("Skeleton created. Edit d1, a2, d4, d6 in Modify > Change Parameters.")
     except Exception:
