@@ -7,12 +7,12 @@ one of them is wrong and I fix it before building more on top.
 
 | Name | Meaning | Value |
 |---|---|---|
-| d1 | base plate -> shoulder axis (J2) | 120 mm |
-| a2 | shoulder -> elbow (upper arm) | 200 mm |
-| d4 | elbow -> wrist centre (forearm) | 180 mm |
-| d6 | wrist centre -> flange / TCP | 100 mm |
+| d1 | base plate -> shoulder axis (J2) | 200 mm |
+| a2 | shoulder -> elbow (upper arm) | 290 mm |
+| d4 | elbow -> wrist centre (forearm) | 290 mm |
+| d6 | wrist centre -> flange / TCP | 120 mm |
 
-Max reach from the shoulder: a2 + d4 + d6 = 480 mm.
+Max reach from the shoulder: a2 + d4 + d6 = 700 mm (xArm 7 class).
 
 ## Zero pose and joint axes
 
@@ -42,7 +42,7 @@ J4, J5, J6 meet at one point (wrist centre). That is what gives the closed-form 
 
 Frame 6 sits at the TCP (it already includes d6).
 
-Stretched-out reference pose: q = [0, 0, 90°, 0, 0, 0] puts the TCP at x = 480 mm, z = 120 mm, tool horizontal.
+Stretched-out reference pose: q = [0, 0, 90°, 0, 0, 0] puts the TCP at x = 700 mm, z = 200 mm, tool horizontal.
 
 ## Joint limits used in the analysis (assumed)
 

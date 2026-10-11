@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.dirname(__file__))
 import kinematics as kin
 import dynamics as dyn
-from params import Q_MIN, Q_MAX, build_components
+from params import Q_MIN, Q_MAX, PAYLOAD, build_components
 from actuators import ACTUATORS, ASSUMED_BACKLASH_ARCMIN
 import error_budget as eb
 
@@ -19,12 +19,7 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 IMG = os.path.join(ROOT, "docs", "img")
 os.makedirs(IMG, exist_ok=True)
 SF = 1.5
-MAX_BACKLASH = 12   # arcmin, for joints that move the tip (J1-J5)
-# Chosen by hand. J1/J2: the hollow-shaft AKH70-16 (dual 21-bit encoders with one on
-# the output side, big torque margin, 7 mm bore for cables). J3: the much lighter AK45-36 V3,
-# because the elbow actuator's weight loads the shoulder. The wrist is picked by the
-# search below (lightest module that is strong enough and low backlash).
-PREFERRED = {1: "CubeMars AKH70-16", 2: "CubeMars AKH70-16", 3: "CubeMars AK45-36 V3"}
+MAX_BACKLASH = 12   # arcmin, preferred for joints that move the tip (J2-J5)
 ALPHA = 5.0
 JOINTS = ["J1", "J2", "J3", "J4", "J5", "J6"]
 
@@ -48,17 +43,25 @@ def pick(need_rated, need_peak, max_backlash=None):
     return min(ok)[1] if ok else "none in table"
 
 
-def select_actuators(g, payload=0.5, iters=8):
-    """Pick actuators for J2..J5, feed their masses back into the model and
-    repeat until the choice stops changing (heavier motor -> more load)."""
-    choice = dict(PREFERRED)
+def select_actuators(g, payload=PAYLOAD, iters=8):
+    """Pick actuators for J2..J6, feed their masses back into the model and
+    repeat until the choice stops changing (heavier motor -> more load).
+    A part with a known backlash <= MAX_BACKLASH is preferred; if none is strong
+    enough, parts with unknown backlash are allowed (flagged in the results).
+    J1 uses the same part as J2 (its torque is not sized by this model)."""
+    choice = {}
     for _ in range(iters):
         mass = {j: ACTUATORS[c]["mass"] for j, c in choice.items() if c in ACTUATORS}
         comps = build_components(g, payload=payload, act_mass=mass)
         st, sd, _ = dyn.worst_case(n=4000, alpha=ALPHA, comps=comps, seed=7)
-        new = dict(PREFERRED)
-        for j in range(3, 6):    # J4..J6
-            new[j + 1] = pick(st[j] * SF, sd[j] * SF, MAX_BACKLASH if j < 5 else None)
+        new = {}
+        for j in range(1, 6):    # J2..J6
+            lim = MAX_BACKLASH if j < 5 else None
+            c = pick(st[j] * SF, sd[j] * SF, lim)
+            if c == "none in table":
+                c = pick(st[j] * SF, sd[j] * SF, None)
+            new[j + 1] = c
+        new[1] = new[2]
         if new == choice:
             break
         choice = new
@@ -76,7 +79,7 @@ def main():
                "approximate, see `analysis/actuators.py`.\n")
     out.append(f"- Geometry: d1={g.d1*1e3:.0f} mm, a2={g.a2*1e3:.0f} mm, d4={g.d4*1e3:.0f} mm, "
                f"d6={g.d6*1e3:.0f} mm  ->  max reach from shoulder {1e3*(g.a2+g.d4+g.d6):.0f} mm")
-    out.append(f"- Only modules with an integrated driver are considered; J1-J5 need a known backlash of at most {MAX_BACKLASH} arcmin")
+    out.append(f"- Only modules with an integrated driver are considered; a known backlash of at most {MAX_BACKLASH} arcmin is preferred (parts with unknown backlash only if nothing else is strong enough)")
     out.append(f"- Total moving mass in the model: {dyn.total_mass(comps):.2f} kg "
                f"(payload {[c.mass for c in comps if c.name=='payload'][0]} kg)\n")
 
@@ -128,7 +131,7 @@ def main():
     out.append("## Payload sweep (shoulder J2 and elbow J3, static, x SF)\n")
     out.append("| payload (kg) | J2 (Nm) | J3 (Nm) |")
     out.append("|---|---|---|")
-    pays = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5]
+    pays = [0.5, 1.0, 1.5, 2.0, 3.0, 3.5]
     j2s = []
     for pay in pays:
         c = build_components(g, payload=pay, act_mass=act_mass)
@@ -138,9 +141,9 @@ def main():
     out.append("")
     plt.figure(figsize=(5, 3.2))
     plt.plot(pays, j2s, "o-")
-    for name, v in (("AK60-6 rated", 3.0), ("AK70-10 rated", 8.3)):
-        plt.axhline(v, ls="--", lw=0.8, color="gray")
-        plt.text(pays[0], v + 0.2, name, fontsize=7)
+    v = ACTUATORS[choice[2]]["rated"]
+    plt.axhline(v, ls="--", lw=0.8, color="gray")
+    plt.text(pays[0], v + 0.5, choice[2] + " rated", fontsize=7)
     plt.xlabel("payload (kg)"); plt.ylabel("J2 torque x SF (Nm)")
     plt.title("Shoulder torque vs payload"); plt.tight_layout()
     plt.savefig(os.path.join(IMG, "payload_sweep.png"), dpi=150); plt.close()

@@ -2,9 +2,9 @@
 
 Design assumptions come from `analysis/params.py`. Actuator numbers are approximate, see `analysis/actuators.py`.
 
-- Geometry: d1=120 mm, a2=200 mm, d4=180 mm, d6=100 mm  ->  max reach from shoulder 480 mm
-- Only modules with an integrated driver are considered; J1-J5 need a known backlash of at most 12 arcmin
-- Total moving mass in the model: 3.19 kg (payload 0.5 kg)
+- Geometry: d1=200 mm, a2=290 mm, d4=290 mm, d6=120 mm  ->  max reach from shoulder 700 mm
+- Only modules with an integrated driver are considered; a known backlash of at most 12 arcmin is preferred (parts with unknown backlash only if nothing else is strong enough)
+- Total moving mass in the model: 6.62 kg (payload 2.0 kg)
 
 ## Worst-case joint torque
 
@@ -12,11 +12,11 @@ Random search of 30 000 poses inside the joint limits plus the stretched-out pos
 
 | Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | actuator | rated margin |
 |---|---|---|---|---|---|---|
-| J1 | 0.00 | 1.71 | 0.00 | 2.57 | CubeMars AKH70-16 | n/a (point-mass model) |
-| J2 | 8.03 | 10.52 | 12.05 | 15.78 | CubeMars AKH70-16 | 2.2x |
-| J3 | 3.61 | 4.85 | 5.41 | 7.28 | CubeMars AK45-36 V3 | 1.5x |
-| J4 | 0.59 | 0.79 | 0.88 | 1.19 | CubeMars AK45-36 V3 | 9.1x |
-| J5 | 0.59 | 0.85 | 0.88 | 1.28 | CubeMars AK45-36 V3 | 9.1x |
+| J1 | 0.00 | 9.20 | 0.00 | 13.80 | CubeMars AKH70-48 | n/a (point-mass model) |
+| J2 | 27.22 | 40.77 | 40.82 | 61.15 | CubeMars AKH70-48 | 1.8x |
+| J3 | 12.99 | 20.25 | 19.48 | 30.38 | CubeMars AKH70-16 | 1.3x |
+| J4 | 2.65 | 4.06 | 3.97 | 6.09 | CubeMars AK45-36 V3 | 2.0x |
+| J5 | 2.65 | 4.37 | 3.97 | 6.56 | CubeMars AK45-36 V3 | 2.0x |
 | J6 | 0.00 | 0.00 | 0.00 | 0.00 | CubeMars AK45-36 V3 | n/a (point-mass model) |
 
 J1 and J6 are listed from the point-mass model only: link rotational inertia is ignored, so their numbers are a lower bound. J1 also sees the whole arm's inertia about the vertical axis, so treat these two rows as a minimum, not a size.
@@ -29,14 +29,14 @@ Full backlash range of each joint turned into TCP displacement (mm) with the pos
 
 | Joint | actuator | backlash (arcmin) | stretched pose (mm) | worst pose (mm) | median (mm) |
 |---|---|---|---|---|---|
-| J1 | CubeMars AKH70-16 | 12 | 1.68 | 1.68 | 0.50 |
-| J2 | CubeMars AKH70-16 | 12 | 1.68 | 1.68 | 1.05 |
-| J3 | CubeMars AK45-36 V3 | 12 | 0.98 | 0.98 | 0.85 |
-| J4 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.35 | 0.29 |
-| J5 | CubeMars AK45-36 V3 | 12 | 0.35 | 0.35 | 0.35 |
+| J1 | CubeMars AKH70-48 | 15* | 3.05 | 3.05 | 0.89 |
+| J2 | CubeMars AKH70-48 | 15* | 3.05 | 3.05 | 1.97 |
+| J3 | CubeMars AKH70-16 | 12 | 1.43 | 1.43 | 1.27 |
+| J4 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.42 | 0.35 |
+| J5 | CubeMars AK45-36 V3 | 12 | 0.42 | 0.42 | 0.42 |
 | J6 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.00 | 0.00 |
 
-All joints combined: worst case (all at the limit, same direction) 4.7 mm, root-sum-square worst 2.6 mm, median 1.5 mm (full range, so roughly half of that as +/- around the commanded position).
+All joints combined: worst case (all at the limit, same direction) 8.0 mm, root-sum-square worst 4.6 mm, median 2.6 mm (full range, so roughly half of that as +/- around the commanded position).
 
 Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on camera feedback for the last step. Link deflection is not in this table yet.
 
@@ -44,28 +44,28 @@ Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on came
 
 | payload (kg) | J2 (Nm) | J3 (Nm) |
 |---|---|---|
-| 0.1 | 9.23 | 3.76 |
-| 0.25 | 10.29 | 4.38 |
-| 0.5 | 12.05 | 5.41 |
-| 0.75 | 13.82 | 6.44 |
-| 1.0 | 15.58 | 7.47 |
-| 1.5 | 19.11 | 9.53 |
+| 0.5 | 25.37 | 10.43 |
+| 1.0 | 30.52 | 13.45 |
+| 1.5 | 35.67 | 16.47 |
+| 2.0 | 40.82 | 19.48 |
+| 3.0 | 51.13 | 25.52 |
+| 3.5 | 56.28 | 28.53 |
 
 ## Workspace and singularities
 
-- TCP height range: -245 .. 600 mm
-- Max horizontal reach (sampled): 480 mm
-- Max distance from base axis incl. all poses: 600 mm
+- TCP height range: -333 .. 900 mm
+- Max horizontal reach (sampled): 700 mm
+- Max distance from base axis incl. all poses: 900 mm
 Fraction of sampled poses within 10 degrees of a singularity (uniform in joint space, so the numbers say how much of the joint range is affected, not how much of a task space):
 
 - wrist (J5 near 0): 8.8 %
 - elbow (stretched / folded): 14.7 %
-- shoulder (wrist centre within 30 mm of J1 axis): 18.3 %
+- shoulder (wrist centre within 30 mm of J1 axis): 15.0 %
 
 ## Inverse kinematics check
 
 - 2000 random poses: max FK(IK(T)) - T error = 6.5e-14
-- Solutions inside joint limits per pose: min 1, mean 3.61, max 8
+- Solutions inside joint limits per pose: min 1, mean 3.49, max 8
 
 ![workspace](img/workspace.png)
 ![payload](img/payload_sweep.png)

@@ -16,7 +16,7 @@ import traceback
 import adsk.core
 import adsk.fusion
 
-PARAMS_MM = {"d1": 120, "a2": 200, "d4": 180, "d6": 100}
+PARAMS_MM = {"d1": 200, "a2": 290, "d4": 290, "d6": 120}
 
 
 def run(context):

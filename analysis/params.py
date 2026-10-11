@@ -12,10 +12,10 @@ G = 9.81
 
 @dataclass(frozen=True)
 class Geometry:
-    d1: float = 0.12    # base plate -> shoulder axis (J2)
-    a2: float = 0.20    # shoulder -> elbow (upper arm)
-    d4: float = 0.18    # elbow -> wrist centre (forearm)
-    d6: float = 0.10    # wrist centre -> flange / TCP
+    d1: float = 0.20    # base plate -> shoulder axis (J2)
+    a2: float = 0.29    # shoulder -> elbow (upper arm)
+    d4: float = 0.29    # elbow -> wrist centre (forearm)
+    d6: float = 0.12    # wrist centre -> flange / TCP
 
 
 # Joint limits (q as defined by the DH table in kinematics.py).
@@ -36,8 +36,12 @@ class Component:
 DEFAULT_ACT_MASS = {2: 0.52, 3: 0.29, 4: 0.082, 5: 0.082, 6: 0.057}
 
 
-def build_components(g: Geometry = Geometry(), payload: float = 0.5,
-                     tool: float = 0.2, structure_scale: float = 1.0,
+PAYLOAD = 2.0   # kg carried at the TCP
+TOOL = 0.5      # kg gripper / end effector
+
+
+def build_components(g: Geometry = Geometry(), payload: float = PAYLOAD,
+                     tool: float = TOOL, structure_scale: float = 1.0,
                      act_mass: dict = None) -> list:
     """Mass model. act_mass[j] = mass of the actuator that drives joint j.
     Default actuator masses are datasheet numbers from memory (verify).
@@ -48,10 +52,10 @@ def build_components(g: Geometry = Geometry(), payload: float = 0.5,
         # frame 1 rotates with J1 only: carries the J2 actuator body
         Component("J2 actuator", 1, (0, 0, 0), m[2]),
         # frame 2 (origin at elbow) carries upper arm + J3 actuator body
-        Component("upper arm structure", 2, (-g.a2 / 2, 0, 0), 0.12 * s),
+        Component("upper arm structure", 2, (-g.a2 / 2, 0, 0), 0.45 * s),
         Component("J3 actuator", 2, (0, 0, 0), m[3]),
         # frame 3 (origin at elbow, z along forearm) carries forearm + J4 body
-        Component("forearm structure", 3, (0, 0, g.d4 / 2), 0.10 * s),
+        Component("forearm structure", 3, (0, 0, g.d4 / 2), 0.35 * s),
         Component("J4 actuator", 3, (0, 0, 0.75 * g.d4), m[4]),
         # frame 4 (origin at wrist centre) carries J5 body
         Component("J5 actuator", 4, (0, 0, 0), m[5]),

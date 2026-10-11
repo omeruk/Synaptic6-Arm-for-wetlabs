@@ -112,4 +112,3 @@ def test_backlash_error_stretched_pose():
     g = kin.GEO
     dist = g.a2 + g.d4 + g.d6          # shoulder axis to TCP, all in a line
     assert np.isclose(e[0, 1], 9 * eb.ARCMIN * dist * 1e3, rtol=1e-9)
-    assert np.isclose(e[0, 1], 1.2566, atol=1e-3)
