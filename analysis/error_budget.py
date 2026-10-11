@@ -23,11 +23,10 @@ ARCMIN = np.pi / (180 * 60)
 
 
 def backlash_arcmin(choice):
-    """choice: {joint number: actuator name}. J1 is not in the moving-mass
-    selection, so it defaults to the same part as J2."""
+    """choice: {joint number: actuator name}."""
     out = []
     for j in range(1, 7):
-        name = choice.get(j) or choice.get(2)
+        name = choice.get(j)
         b = ACTUATORS.get(name, {}).get("backlash")
         out.append(ASSUMED_BACKLASH_ARCMIN if b is None else b)
     return np.array(out, dtype=float)

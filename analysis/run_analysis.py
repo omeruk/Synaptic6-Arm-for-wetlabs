@@ -19,7 +19,11 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 IMG = os.path.join(ROOT, "docs", "img")
 os.makedirs(IMG, exist_ok=True)
 SF = 1.5
-LOW_BACKLASH = {2: 10, 3: 10}   # arcmin limit for the big joints (that is where it hurts)
+MAX_BACKLASH = 12   # arcmin, for joints that move the tip (J1-J5)
+# Chosen by hand: the hollow-shaft AKH70-16 has dual 21-bit encoders (one on the
+# output side), 3x torque margin and a 7 mm bore for cables. The wrist is picked
+# by the search below (lightest module that is strong enough and low backlash).
+PREFERRED = {1: "CubeMars AKH70-16", 2: "CubeMars AKH70-16", 3: "CubeMars AKH70-16"}
 ALPHA = 5.0
 JOINTS = ["J1", "J2", "J3", "J4", "J5", "J6"]
 
@@ -33,11 +37,11 @@ def workspace(n=60_000, seed=0):
 
 
 def pick(need_rated, need_peak, max_backlash=None):
-    """Lightest actuator whose rated torque covers the holding need and whose
-    peak torque covers the static+dynamic need. With max_backlash set, only
-    actuators with a known backlash at or below it (arcmin) are considered."""
+    """Lightest module with an integrated driver whose rated torque covers the
+    holding need and whose peak torque covers the static+dynamic need. With
+    max_backlash set, only parts with a known backlash at or below it (arcmin)."""
     ok = [(v["mass"], k) for k, v in ACTUATORS.items()
-          if v["rated"] >= need_rated and v["peak"] >= need_peak
+          if v["driver"] and v["rated"] >= need_rated and v["peak"] >= need_peak
           and (max_backlash is None
                or (v["backlash"] is not None and v["backlash"] <= max_backlash))]
     return min(ok)[1] if ok else "none in table"
@@ -46,12 +50,14 @@ def pick(need_rated, need_peak, max_backlash=None):
 def select_actuators(g, payload=0.5, iters=8):
     """Pick actuators for J2..J5, feed their masses back into the model and
     repeat until the choice stops changing (heavier motor -> more load)."""
-    choice = {}
+    choice = dict(PREFERRED)
     for _ in range(iters):
         mass = {j: ACTUATORS[c]["mass"] for j, c in choice.items() if c in ACTUATORS}
         comps = build_components(g, payload=payload, act_mass=mass)
         st, sd, _ = dyn.worst_case(n=4000, alpha=ALPHA, comps=comps, seed=7)
-        new = {j + 1: pick(st[j] * SF, sd[j] * SF, LOW_BACKLASH.get(j + 1)) for j in range(1, 6)}
+        new = dict(PREFERRED)
+        for j in range(3, 6):    # J4..J6
+            new[j + 1] = pick(st[j] * SF, sd[j] * SF, MAX_BACKLASH if j < 5 else None)
         if new == choice:
             break
         choice = new
@@ -69,7 +75,7 @@ def main():
                "approximate, see `analysis/actuators.py`.\n")
     out.append(f"- Geometry: d1={g.d1*1e3:.0f} mm, a2={g.a2*1e3:.0f} mm, d4={g.d4*1e3:.0f} mm, "
                f"d6={g.d6*1e3:.0f} mm  ->  max reach from shoulder {1e3*(g.a2+g.d4+g.d6):.0f} mm")
-    out.append(f"- Backlash requirement: J2 and J3 must have a known backlash of at most {LOW_BACKLASH[2]} arcmin")
+    out.append(f"- Only modules with an integrated driver are considered; J1-J5 need a known backlash of at most {MAX_BACKLASH} arcmin")
     out.append(f"- Total moving mass in the model: {dyn.total_mass(comps):.2f} kg "
                f"(payload {[c.mass for c in comps if c.name=='payload'][0]} kg)\n")
 
@@ -80,12 +86,14 @@ def main():
                f"and a local refinement. Dynamic = static + M(q)*alpha with alpha = {ALPHA} rad/s^2 "
                f"on every joint, safety factor {SF}. Actuator masses were fed back into the model "
                f"until the selection stopped changing.\n")
-    out.append("| Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | lightest candidate |")
-    out.append("|---|---|---|---|---|---|")
+    out.append("| Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | actuator | rated margin |")
+    out.append("|---|---|---|---|---|---|---|")
     for j in range(6):
         need_rated, need_peak = st[j] * SF, sd[j] * SF
-        cand = choice[j + 1] if j in (1, 2, 3, 4) else "not sized (needs link inertia)"
-        out.append(f"| {JOINTS[j]} | {st[j]:.2f} | {sd[j]:.2f} | {need_rated:.2f} | {need_peak:.2f} | {cand} |")
+        cand = choice[j + 1]
+        rated = ACTUATORS[cand]["rated"]
+        margin = f"{rated / need_rated:.1f}x" if need_rated > 0.05 else "n/a (point-mass model)"
+        out.append(f"| {JOINTS[j]} | {st[j]:.2f} | {sd[j]:.2f} | {need_rated:.2f} | {need_peak:.2f} | {cand} | {margin} |")
     out.append("")
     out.append("J1 and J6 are listed from the point-mass model only: link rotational inertia "
                "is ignored, so their numbers are a lower bound. J1 also sees the whole arm's inertia "
@@ -100,12 +108,12 @@ def main():
     out.append("Full backlash range of each joint turned into TCP displacement (mm) with the "
                "position Jacobian, over 3000 random poses plus the stretched-out pose. "
                f"Joints without a datasheet figure use an assumed {ASSUMED_BACKLASH_ARCMIN} arcmin "
-               "(marked *). J1 uses the same part as J2.\n")
+               "(marked *).\n")
     out.append("| Joint | actuator | backlash (arcmin) | stretched pose (mm) | worst pose (mm) | median (mm) |")
     out.append("|---|---|---|---|---|---|")
     for j in range(6):
-        name = choice.get(j + 1) or ("(same as J2)" if j == 0 else "n/a")
-        known = ACTUATORS.get(choice.get(j + 1) or choice.get(2), {}).get("backlash") is not None
+        name = choice.get(j + 1) or "n/a"
+        known = ACTUATORS.get(choice.get(j + 1), {}).get("backlash") is not None
         out.append(f"| {JOINTS[j]} | {name} | {bl[j]:.0f}{'' if known else '*'} | "
                    f"{sm['stretched'][j]:.2f} | {sm['per_joint_max'][j]:.2f} | {sm['per_joint_median'][j]:.2f} |")
     out.append("")

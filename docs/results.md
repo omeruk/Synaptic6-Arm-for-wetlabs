@@ -3,21 +3,21 @@
 Design assumptions come from `analysis/params.py`. Actuator numbers are approximate, see `analysis/actuators.py`.
 
 - Geometry: d1=120 mm, a2=200 mm, d4=180 mm, d6=100 mm  ->  max reach from shoulder 480 mm
-- Backlash requirement: J2 and J3 must have a known backlash of at most 10 arcmin
-- Total moving mass in the model: 1.97 kg (payload 0.5 kg)
+- Only modules with an integrated driver are considered; J1-J5 need a known backlash of at most 12 arcmin
+- Total moving mass in the model: 3.73 kg (payload 0.5 kg)
 
 ## Worst-case joint torque
 
 Random search of 30 000 poses inside the joint limits plus the stretched-out pose and a local refinement. Dynamic = static + M(q)*alpha with alpha = 5.0 rad/s^2 on every joint, safety factor 1.5. Actuator masses were fed back into the model until the selection stopped changing.
 
-| Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | lightest candidate |
-|---|---|---|---|---|---|
-| J1 | 0.00 | 1.15 | 0.00 | 1.72 | not sized (needs link inertia) |
-| J2 | 4.90 | 6.56 | 7.35 | 9.84 | CubeMars AKE80-8 |
-| J3 | 2.27 | 3.15 | 3.40 | 4.72 | CubeMars AKE60-8 |
-| J4 | 0.59 | 0.79 | 0.88 | 1.19 | Dynamixel XM430-W350 |
-| J5 | 0.59 | 0.85 | 0.88 | 1.28 | Dynamixel XM430-W350 |
-| J6 | 0.00 | 0.00 | 0.00 | 0.00 | not sized (needs link inertia) |
+| Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | actuator | rated margin |
+|---|---|---|---|---|---|---|
+| J1 | 0.00 | 1.82 | 0.00 | 2.73 | CubeMars AKH70-16 | n/a (point-mass model) |
+| J2 | 9.07 | 11.67 | 13.61 | 17.50 | CubeMars AKH70-16 | 1.9x |
+| J3 | 3.61 | 4.85 | 5.41 | 7.28 | CubeMars AKH70-16 | 4.8x |
+| J4 | 0.59 | 0.79 | 0.88 | 1.19 | CubeMars AK45-36 V3 | 9.1x |
+| J5 | 0.59 | 0.85 | 0.88 | 1.28 | CubeMars AK45-36 V3 | 9.1x |
+| J6 | 0.00 | 0.00 | 0.00 | 0.00 | CubeMars AK45-36 V3 | n/a (point-mass model) |
 
 J1 and J6 are listed from the point-mass model only: link rotational inertia is ignored, so their numbers are a lower bound. J1 also sees the whole arm's inertia about the vertical axis, so treat these two rows as a minimum, not a size.
 
@@ -25,18 +25,18 @@ Rule used: the *rated* (continuous) torque must cover the static holding torque 
 
 ## Tip error from gear backlash
 
-Full backlash range of each joint turned into TCP displacement (mm) with the position Jacobian, over 3000 random poses plus the stretched-out pose. Joints without a datasheet figure use an assumed 15 arcmin (marked *). J1 uses the same part as J2.
+Full backlash range of each joint turned into TCP displacement (mm) with the position Jacobian, over 3000 random poses plus the stretched-out pose. Joints without a datasheet figure use an assumed 15 arcmin (marked *).
 
 | Joint | actuator | backlash (arcmin) | stretched pose (mm) | worst pose (mm) | median (mm) |
 |---|---|---|---|---|---|
-| J1 | (same as J2) | 9 | 1.26 | 1.26 | 0.37 |
-| J2 | CubeMars AKE80-8 | 9 | 1.26 | 1.26 | 0.79 |
-| J3 | CubeMars AKE60-8 | 9 | 0.73 | 0.73 | 0.64 |
-| J4 | Dynamixel XM430-W350 | 15* | 0.00 | 0.44 | 0.36 |
-| J5 | Dynamixel XM430-W350 | 15* | 0.44 | 0.44 | 0.44 |
-| J6 | Dynamixel XL430-W250 | 15* | 0.00 | 0.00 | 0.00 |
+| J1 | CubeMars AKH70-16 | 12 | 1.68 | 1.68 | 0.50 |
+| J2 | CubeMars AKH70-16 | 12 | 1.68 | 1.68 | 1.05 |
+| J3 | CubeMars AKH70-16 | 12 | 0.98 | 0.98 | 0.85 |
+| J4 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.35 | 0.29 |
+| J5 | CubeMars AK45-36 V3 | 12 | 0.35 | 0.35 | 0.35 |
+| J6 | CubeMars AK45-36 V3 | 12 | 0.00 | 0.00 | 0.00 |
 
-All joints combined: worst case (all at the limit, same direction) 3.8 mm, root-sum-square worst 2.0 mm, median 1.2 mm (full range, so roughly half of that as +/- around the commanded position).
+All joints combined: worst case (all at the limit, same direction) 4.7 mm, root-sum-square worst 2.6 mm, median 1.5 mm (full range, so roughly half of that as +/- around the commanded position).
 
 Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on camera feedback for the last step. Link deflection is not in this table yet.
 
@@ -44,12 +44,12 @@ Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on came
 
 | payload (kg) | J2 (Nm) | J3 (Nm) |
 |---|---|---|
-| 0.1 | 4.52 | 1.75 |
-| 0.25 | 5.58 | 2.37 |
-| 0.5 | 7.35 | 3.40 |
-| 0.75 | 9.11 | 4.43 |
-| 1.0 | 10.88 | 5.46 |
-| 1.5 | 14.41 | 7.52 |
+| 0.1 | 10.79 | 3.76 |
+| 0.25 | 11.84 | 4.38 |
+| 0.5 | 13.61 | 5.41 |
+| 0.75 | 15.38 | 6.44 |
+| 1.0 | 17.14 | 7.47 |
+| 1.5 | 20.67 | 9.53 |
 
 ## Workspace and singularities
 
