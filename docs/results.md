@@ -3,7 +3,8 @@
 Design assumptions come from `analysis/params.py`. Actuator numbers are approximate, see `analysis/actuators.py`.
 
 - Geometry: d1=120 mm, a2=200 mm, d4=180 mm, d6=100 mm  ->  max reach from shoulder 480 mm
-- Total moving mass in the model: 2.12 kg (payload 0.5 kg)
+- Backlash requirement: J2 and J3 must have a known backlash of at most 10 arcmin
+- Total moving mass in the model: 1.97 kg (payload 0.5 kg)
 
 ## Worst-case joint torque
 
@@ -11,9 +12,9 @@ Random search of 30 000 poses inside the joint limits plus the stretched-out pos
 
 | Joint | static (Nm) | static+dyn (Nm) | rated needed (Nm) | peak needed (Nm) | lightest candidate |
 |---|---|---|---|---|---|
-| J1 | 0.00 | 1.19 | 0.00 | 1.79 | not sized (needs link inertia) |
-| J2 | 5.35 | 7.06 | 8.02 | 10.59 | CubeMars AK80-9 |
-| J3 | 2.27 | 3.15 | 3.40 | 4.72 | CubeMars AK80-9 |
+| J1 | 0.00 | 1.15 | 0.00 | 1.72 | not sized (needs link inertia) |
+| J2 | 4.90 | 6.56 | 7.35 | 9.84 | CubeMars AKE80-8 |
+| J3 | 2.27 | 3.15 | 3.40 | 4.72 | CubeMars AKE60-8 |
 | J4 | 0.59 | 0.79 | 0.88 | 1.19 | Dynamixel XM430-W350 |
 | J5 | 0.59 | 0.85 | 0.88 | 1.28 | Dynamixel XM430-W350 |
 | J6 | 0.00 | 0.00 | 0.00 | 0.00 | not sized (needs link inertia) |
@@ -22,16 +23,33 @@ J1 and J6 are listed from the point-mass model only: link rotational inertia is 
 
 Rule used: the *rated* (continuous) torque must cover the static holding torque x SF, and the *peak* torque must cover static+dynamic x SF.
 
+## Tip error from gear backlash
+
+Full backlash range of each joint turned into TCP displacement (mm) with the position Jacobian, over 3000 random poses plus the stretched-out pose. Joints without a datasheet figure use an assumed 15 arcmin (marked *). J1 uses the same part as J2.
+
+| Joint | actuator | backlash (arcmin) | stretched pose (mm) | worst pose (mm) | median (mm) |
+|---|---|---|---|---|---|
+| J1 | (same as J2) | 9 | 1.26 | 1.26 | 0.37 |
+| J2 | CubeMars AKE80-8 | 9 | 1.26 | 1.26 | 0.79 |
+| J3 | CubeMars AKE60-8 | 9 | 0.73 | 0.73 | 0.64 |
+| J4 | Dynamixel XM430-W350 | 15* | 0.00 | 0.44 | 0.36 |
+| J5 | Dynamixel XM430-W350 | 15* | 0.44 | 0.44 | 0.44 |
+| J6 | Dynamixel XL430-W250 | 15* | 0.00 | 0.00 | 0.00 |
+
+All joints combined: worst case (all at the limit, same direction) 3.8 mm, root-sum-square worst 2.0 mm, median 1.2 mm (full range, so roughly half of that as +/- around the commanded position).
+
+Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on camera feedback for the last step. Link deflection is not in this table yet.
+
 ## Payload sweep (shoulder J2 and elbow J3, static, x SF)
 
 | payload (kg) | J2 (Nm) | J3 (Nm) |
 |---|---|---|
-| 0.1 | 5.20 | 1.75 |
-| 0.25 | 6.26 | 2.37 |
-| 0.5 | 8.02 | 3.40 |
-| 0.75 | 9.79 | 4.43 |
-| 1.0 | 11.56 | 5.46 |
-| 1.5 | 15.09 | 7.52 |
+| 0.1 | 4.52 | 1.75 |
+| 0.25 | 5.58 | 2.37 |
+| 0.5 | 7.35 | 3.40 |
+| 0.75 | 9.11 | 4.43 |
+| 1.0 | 10.88 | 5.46 |
+| 1.5 | 14.41 | 7.52 |
 
 ## Workspace and singularities
 

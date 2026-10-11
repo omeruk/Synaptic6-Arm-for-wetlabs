@@ -102,3 +102,14 @@ def test_kinetic_energy_consistency():
         v = (pn - p) / eps
         ke += 0.5 * c.mass * v @ v
     assert np.isclose(ke, 0.5 * qd @ dyn.mass_matrix(q, comps) @ qd, rtol=1e-4)
+
+
+def test_backlash_error_stretched_pose():
+    """9 arcmin at the shoulder, arm stretched out: error = angle x distance."""
+    import error_budget as eb
+    b = np.array([0, 9, 0, 0, 0, 0], dtype=float)
+    e = eb.tip_error(b, [np.array([0, 0, np.pi / 2, 0, 0, 0])])
+    g = kin.GEO
+    dist = g.a2 + g.d4 + g.d6          # shoulder axis to TCP, all in a line
+    assert np.isclose(e[0, 1], 9 * eb.ARCMIN * dist * 1e3, rtol=1e-9)
+    assert np.isclose(e[0, 1], 1.2566, atol=1e-3)

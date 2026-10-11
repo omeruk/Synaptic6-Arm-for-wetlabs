@@ -12,12 +12,14 @@ sys.path.insert(0, os.path.dirname(__file__))
 import kinematics as kin
 import dynamics as dyn
 from params import Q_MIN, Q_MAX, build_components
-from actuators import ACTUATORS
+from actuators import ACTUATORS, ASSUMED_BACKLASH_ARCMIN
+import error_budget as eb
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 IMG = os.path.join(ROOT, "docs", "img")
 os.makedirs(IMG, exist_ok=True)
 SF = 1.5
+LOW_BACKLASH = {2: 10, 3: 10}   # arcmin limit for the big joints (that is where it hurts)
 ALPHA = 5.0
 JOINTS = ["J1", "J2", "J3", "J4", "J5", "J6"]
 
@@ -30,11 +32,14 @@ def workspace(n=60_000, seed=0):
     return qs, pts, man
 
 
-def pick(need_rated, need_peak):
+def pick(need_rated, need_peak, max_backlash=None):
     """Lightest actuator whose rated torque covers the holding need and whose
-    peak torque covers the static+dynamic need."""
+    peak torque covers the static+dynamic need. With max_backlash set, only
+    actuators with a known backlash at or below it (arcmin) are considered."""
     ok = [(v["mass"], k) for k, v in ACTUATORS.items()
-          if v["rated"] >= need_rated and v["peak"] >= need_peak]
+          if v["rated"] >= need_rated and v["peak"] >= need_peak
+          and (max_backlash is None
+               or (v["backlash"] is not None and v["backlash"] <= max_backlash))]
     return min(ok)[1] if ok else "none in table"
 
 
@@ -46,7 +51,7 @@ def select_actuators(g, payload=0.5, iters=8):
         mass = {j: ACTUATORS[c]["mass"] for j, c in choice.items() if c in ACTUATORS}
         comps = build_components(g, payload=payload, act_mass=mass)
         st, sd, _ = dyn.worst_case(n=4000, alpha=ALPHA, comps=comps, seed=7)
-        new = {j + 1: pick(st[j] * SF, sd[j] * SF) for j in range(1, 6)}
+        new = {j + 1: pick(st[j] * SF, sd[j] * SF, LOW_BACKLASH.get(j + 1)) for j in range(1, 6)}
         if new == choice:
             break
         choice = new
@@ -64,6 +69,7 @@ def main():
                "approximate, see `analysis/actuators.py`.\n")
     out.append(f"- Geometry: d1={g.d1*1e3:.0f} mm, a2={g.a2*1e3:.0f} mm, d4={g.d4*1e3:.0f} mm, "
                f"d6={g.d6*1e3:.0f} mm  ->  max reach from shoulder {1e3*(g.a2+g.d4+g.d6):.0f} mm")
+    out.append(f"- Backlash requirement: J2 and J3 must have a known backlash of at most {LOW_BACKLASH[2]} arcmin")
     out.append(f"- Total moving mass in the model: {dyn.total_mass(comps):.2f} kg "
                f"(payload {[c.mass for c in comps if c.name=='payload'][0]} kg)\n")
 
@@ -86,6 +92,28 @@ def main():
                "about the vertical axis, so treat these two rows as a minimum, not a size.\n")
     out.append("Rule used: the *rated* (continuous) torque must cover the static holding "
                "torque x SF, and the *peak* torque must cover static+dynamic x SF.\n")
+
+    # ---- backlash error budget -----------------------------------------
+    bl = eb.backlash_arcmin(choice)
+    sm = eb.summary(bl)
+    out.append("## Tip error from gear backlash\n")
+    out.append("Full backlash range of each joint turned into TCP displacement (mm) with the "
+               "position Jacobian, over 3000 random poses plus the stretched-out pose. "
+               f"Joints without a datasheet figure use an assumed {ASSUMED_BACKLASH_ARCMIN} arcmin "
+               "(marked *). J1 uses the same part as J2.\n")
+    out.append("| Joint | actuator | backlash (arcmin) | stretched pose (mm) | worst pose (mm) | median (mm) |")
+    out.append("|---|---|---|---|---|---|")
+    for j in range(6):
+        name = choice.get(j + 1) or ("(same as J2)" if j == 0 else "n/a")
+        known = ACTUATORS.get(choice.get(j + 1) or choice.get(2), {}).get("backlash") is not None
+        out.append(f"| {JOINTS[j]} | {name} | {bl[j]:.0f}{'' if known else '*'} | "
+                   f"{sm['stretched'][j]:.2f} | {sm['per_joint_max'][j]:.2f} | {sm['per_joint_median'][j]:.2f} |")
+    out.append("")
+    out.append(f"All joints combined: worst case (all at the limit, same direction) {sm['worst_sum']:.1f} mm, "
+               f"root-sum-square worst {sm['worst_rss']:.1f} mm, median {sm['median_rss']:.1f} mm "
+               "(full range, so roughly half of that as +/- around the commanded position).\n")
+    out.append("Backlash alone does not meet a 0.5 mm goal, which is why the plan relies on "
+               "camera feedback for the last step. Link deflection is not in this table yet.\n")
 
     # ---- payload sweep -------------------------------------------------
     out.append("## Payload sweep (shoulder J2 and elbow J3, static, x SF)\n")
