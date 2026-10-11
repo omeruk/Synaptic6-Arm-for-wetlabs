@@ -22,9 +22,9 @@ Sizes and weights are from the CubeMars catalogue; take the exact drawing from t
 | 4 | `upper_arm` | hollow tube / box | shoulder axis to elbow axis = a2 = 290 mm, centre to centre |
 | 5 | `J3_actuator` | STEP: CubeMars **AKH70-16** | Ø90 x 60.5 mm, 879 g, axis +y at the elbow |
 | 6 | `forearm` | hollow tube | elbow to wrist centre = d4 = 290 mm, J4 (roll) axis along it |
-| 7 | `J4_actuator` | STEP: CubeMars **AK45-36 V3** | Ø55 x 56.5 mm, 349 g, roll axis along the forearm |
+| 7 | `J4_actuator` | STEP: CubeMars **AK45-36 V3** | Ø55 x 56.5 mm, 349 g, roll axis along the forearm. Output face (up) sits 50 mm below the wrist centre, which leaves 22.5 mm to the J5 body for the bracket (position along the forearm does not change d4) |
 | 8 | `wrist` | small block | J5 and J6 axes meet at ONE point (wrist centre) |
-| 9 | `J5_actuator`, `J6_actuator` | STEP: **AK45-36 V3** | J5 axis +y, J6 axis +z at q = 0 |
+| 9 | `J5_actuator`, `J6_actuator` | STEP: **AK45-36 V3** | J5 axis +y through the wrist centre, J6 axis +z with its output face at the TCP |
 | 10 | `flange` | disc | face of the tool, TCP is d6 = 120 mm past the wrist centre on the J6 axis |
 | 11 | `tool_dummy` | block | 0.5 kg gripper stand-in, so the mass model matches (payload 2 kg on top) |
 
@@ -51,6 +51,17 @@ All six modules have the driver inside and talk CAN, so there is one bus and one
 
 The turret and the wrist block are missing from the mass model, so V1 will probably
 show a bit more load than the current numbers. That is expected and the reason for this step.
+
+## Motor placement checks (done in Fusion)
+| Distance | Value |
+|---|---|
+| J1 bottom face -> J2 axis | 200 mm |
+| J2 axis -> J3 axis | 290 mm |
+| J3 axis -> J4 output face | 240 mm |
+| J4 output face -> J5 axis (wrist centre) | 50 mm |
+| J5 axis -> J6 output face (TCP) | 120 mm |
+
+A quick cylinder check of the J6 motor swinging around J5 (+-115 deg) keeps at least 18 mm from the J4 body.
 
 ## Open questions to settle with the STEP files
 - Does the 90 mm AKH70-48 fit at the shoulder with d1 = 200 mm without hitting the base?
