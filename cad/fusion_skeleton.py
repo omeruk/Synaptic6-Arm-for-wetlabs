@@ -24,6 +24,8 @@ def run(context):
     ui = app.userInterface
     try:
         design = adsk.fusion.Design.cast(app.activeProduct)
+        # user parameters only exist in a parametric design (history captured)
+        design.designType = adsk.fusion.DesignTypes.ParametricDesignType
         root = design.rootComponent
 
         # --- user parameters ------------------------------------------------
